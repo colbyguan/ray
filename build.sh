@@ -19,11 +19,13 @@ fi
 COMMON_DIR="$ROOT_DIR/src/common"
 PLASMA_DIR="$ROOT_DIR/src/plasma"
 PHOTON_DIR="$ROOT_DIR/src/photon"
+GLOBAL_SCHEDULER_DIR="$ROOT_DIR/src/global_scheduler"
 
 PYTHON_DIR="$ROOT_DIR/lib/python"
 PYTHON_COMMON_DIR="$PYTHON_DIR/common"
 PYTHON_PLASMA_DIR="$PYTHON_DIR/plasma"
 PYTHON_PHOTON_DIR="$PYTHON_DIR/photon"
+PYTHON_GLOBAL_SCHEDULER_DIR="$PYTHON_DIR/global_scheduler"
 
 pushd "$COMMON_DIR"
   make
@@ -53,3 +55,8 @@ pushd "$PHOTON_DIR"
 popd
 cp "$PHOTON_DIR/build/photon_scheduler" "$PYTHON_PHOTON_DIR/build/"
 cp "$PHOTON_DIR/photon/libphoton.so" "$PYTHON_PHOTON_DIR/"
+
+pushd "$GLOBAL_SCHEDULER_DIR"
+  make
+popd
+cp "$GLOBAL_SCHEDULER_DIR/build/global_scheduler" "$PYTHON_GLOBAL_SCHEDULER_DIR/build/"

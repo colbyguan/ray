@@ -177,6 +177,12 @@ void signal_handler(int signal) {
 
 /* End of the cleanup code. */
 
+void handle_task_scheduled_callback(task *original_task, void *user_context) {
+  printf("QQQQQQQ\n");
+  handle_task_scheduled(g_state->scheduler_info, g_state->scheduler_state,
+                        task_task_spec(original_task));
+}
+
 void start_server(const char *socket_name,
                   const char *redis_addr,
                   int redis_port,
@@ -186,9 +192,21 @@ void start_server(const char *socket_name,
   g_state =
       init_local_scheduler(loop, redis_addr, redis_port, plasma_socket_name);
 
-  /* Run event loop. */
+  /* Register a callback for registering new clients. */
   event_loop_add_file(loop, fd, EVENT_LOOP_READ, new_client_connection,
                       g_state);
+  /* Subscribe to receive notifications about tasks that are assigned to this
+   * local scheduler by the global scheduler. TODO(rkn): this also needs to get
+   * anything that has already been assigned to this local scheduler. */
+  retry_info retry = {
+      .num_retries = 0,
+      .timeout = 100,
+      .fail_callback = NULL,
+  };
+  task_table_subscribe(g_state->scheduler_info->db, NIL_ID,
+                       TASK_STATUS_SCHEDULED, handle_task_scheduled_callback,
+                       NULL, &retry, NULL, NULL);
+  /* Run event loop. */
   event_loop_run(loop);
 }
 
