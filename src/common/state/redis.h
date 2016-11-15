@@ -23,7 +23,7 @@ struct db_handle {
   /** String that identifies this client type. */
   char *client_type;
   /** Unique ID for this client within the type. */
-  int64_t client_id;
+  unique_id client_id;
   /** Redis context for this global state store connection. */
   redisAsyncContext *context;
   /** Redis context for "subscribe" communication.
@@ -167,5 +167,14 @@ void redis_task_table_publish_publish_callback(redisAsyncContext *c,
  * @return Void.
  */
 void redis_task_table_subscribe(table_callback_data *callback_data);
+
+/**
+ * Subscribe to updates of the node table.
+ *
+ * @param callback_data Data structure containing redis connection and timeout
+ *        information.
+ * @return Void.
+ */
+void redis_local_scheduler_table_subscribe(table_callback_data *callback_data);
 
 #endif /* REDIS_H */

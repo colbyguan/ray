@@ -82,6 +82,13 @@ char *sha1_to_hex(const unsigned char *sha1, char *buffer);
 
 typedef unique_id object_id;
 
+/** The node id is an identifier for the node the task is scheduled on. */
+typedef unique_id node_id;
+
+/** The local scheduler id is an identifier for the local scheduler the task is
+ *  scheduled on. */
+typedef unique_id local_scheduler_id;
+
 /**
  * Compare two object IDs.
  *

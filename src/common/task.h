@@ -28,9 +28,6 @@ typedef unique_id task_id;
  *  particular execution of the task. */
 typedef unique_id task_iid;
 
-/** The node id is an identifier for the node the task is scheduled on. */
-typedef unique_id node_id;
-
 /**
  * ==== Task specifications ====
  * Contain all the information neccessary to execute the

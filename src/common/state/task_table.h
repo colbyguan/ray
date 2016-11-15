@@ -112,7 +112,7 @@ typedef void (*task_table_subscribe_callback)(task *task, void *user_context);
  * @return Void.
  */
 void task_table_subscribe(db_handle *db_handle,
-                          node_id node,
+                          local_scheduler_id local_scheduler,
                           scheduling_state state_filter,
                           task_table_subscribe_callback subscribe_callback,
                           void *subscribe_context,
@@ -123,7 +123,9 @@ void task_table_subscribe(db_handle *db_handle,
 /* Data that is needed to register task table subscribe callbacks with the state
  * database. */
 typedef struct {
-  node_id node;
+  /** The ID of the local scheduler whose updates we are subscribing to. */
+  local_scheduler_id local_scheduler;
+  //node_id node;
   scheduling_state state_filter;
   task_table_subscribe_callback subscribe_callback;
   void *subscribe_context;
