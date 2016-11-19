@@ -5,7 +5,7 @@
 
 table_callback_data *init_table_callback(db_handle *db_handle,
                                          unique_id id,
-                                         void *data,
+                                         OWNER void *data,
                                          retry_info *retry,
                                          table_done_callback done_callback,
                                          table_retry_callback retry_callback,
@@ -46,6 +46,11 @@ void destroy_table_callback(table_callback_data *callback_data) {
 
   if (callback_data->requests_info)
     free(callback_data->requests_info);
+
+  if(callback_data->data) {
+    free(callback_data->data);
+    callback_data->data = NULL;
+  }
 
   outstanding_callbacks_remove(callback_data);
 
