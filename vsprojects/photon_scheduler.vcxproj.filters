@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\photon\photon_extension.c">
+    <ClCompile Include="..\src\photon\photon_scheduler.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

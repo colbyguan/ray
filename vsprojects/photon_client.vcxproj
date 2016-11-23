@@ -19,27 +19,24 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\plasma\eviction_policy.c" />
-    <ClCompile Include="..\src\plasma\fling.c" />
-    <ClCompile Include="..\src\plasma\malloc.c" />
-    <ClCompile Include="..\src\plasma\plasma.c" />
-    <ClCompile Include="..\src\plasma\plasma_client.c" />
+    <ClCompile Include="..\src\photon\photon_algorithm.c" />
+    <ClCompile Include="..\src\photon\photon_client.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\plasma\eviction_policy.h" />
-    <ClInclude Include="..\src\plasma\fling.h" />
-    <ClInclude Include="..\src\plasma\malloc.h" />
-    <ClInclude Include="..\src\plasma\plasma.h" />
-    <ClInclude Include="..\src\plasma\plasma_client.h" />
+    <ClInclude Include="..\src\photon\photon.h" />
+    <ClInclude Include="..\src\photon\photon_algorithm.h" />
+    <ClInclude Include="..\src\photon\photon_client.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="common.vcxproj">
       <Project>{c002f9f6-8447-4b95-aa18-fb781f4a7865}</Project>
-      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <ProjectReference Include="plasma_client.vcxproj">
+      <Project>{ddfcec30-7024-421a-979a-b1bf69cf464e}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{DDFCEC30-7024-421A-979A-B1BF69CF464E}</ProjectGuid>
+    <ProjectGuid>{D4F50B21-7FDE-41CE-87F5-2CF71178EF40}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -69,17 +66,24 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(SolutionDir)vsprojects\base.props" Condition="exists('$(SolutionDir)vsprojects\base.props')" />
   </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="photon.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="photon.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="photon.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="photon.props" />
+  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <Link>
       <SubSystem>Console</SubSystem>
     </Link>
-    <ClCompile />
-    <ClCompile />
-    <ClCompile />
-    <ClCompile />
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

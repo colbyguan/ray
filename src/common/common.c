@@ -13,15 +13,25 @@ const unique_id NIL_ID = {{255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
                            255, 255, 255, 255, 255, 255, 255, 255, 255, 255}};
 
 unique_id globally_unique_id(void) {
+  unique_id result = { 0 };
+  int success;
+#ifdef __RTL_GENRANDOM
+  success = RtlGenRandom(&result.id[0], UNIQUE_ID_SIZE);
+#else
   /* Use /dev/urandom for "real" randomness. */
-  int fd;
-  int const flags = 0 /* for Windows compatibility */;
-  if ((fd = open("/dev/urandom", O_RDONLY, flags)) == -1) {
+  FILE *const f = fopen("/dev/urandom", "rb");
+  if (f != NULL) {
+    size_t const n =
+      fread(&result.id[0], sizeof(*result.id), UNIQUE_ID_SIZE, f);
+    success = n == UNIQUE_ID_SIZE;
+    fclose(f);
+  } else {
+    success = false;
+  }
+#endif
+  if (!success) {
     LOG_ERROR("Could not generate random number");
   }
-  unique_id result;
-  read(fd, &result.id[0], UNIQUE_ID_SIZE);
-  close(fd);
   return result;
 }
 
