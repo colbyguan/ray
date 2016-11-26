@@ -437,10 +437,6 @@ class Worker(object):
     Args:
       objectid (object_id.ObjectID): The object ID of the value to retrieve.
     """
-    successes = [False]
-    while successes != [True]:
-      successes = self.plasma_client.fetch([objectid.id()])
-      time.sleep(0.001)
     buff = self.plasma_client.get(objectid.id())
     metadata = self.plasma_client.get_metadata(objectid.id())
     metadata_size = len(metadata)
@@ -938,7 +934,7 @@ def register_class(cls, pickle=False, worker=global_worker):
     serialization.add_class_to_whitelist(cls, pickle=pickle)
   worker.run_function_on_all_workers(register_class_for_serialization)
 
-def get(objectid, worker=global_worker):
+def get(object_ids, worker=global_worker):
   """Get a remote object or a list of remote objects from the object store.
 
   This method blocks until the object corresponding to objectid is available in
@@ -948,26 +944,35 @@ def get(objectid, worker=global_worker):
   in the list will be returned.
 
   Args:
-    objectid: Object ID of the object to get or a list of object IDs to get.
+    object_ids: Object ID of the object to get or a list of object IDs to get.
 
   Returns:
     A Python object or a list of Python objects.
   """
   check_connected(worker)
   if worker.mode == PYTHON_MODE:
-    return objectid # In PYTHON_MODE, ray.get is the identity operation (the input will actually be a value not an objectid)
-  if isinstance(objectid, list):
-    values = [worker.get_object(x) for x in objectid]
-    for i, value in enumerate(values):
-      if isinstance(value, RayTaskError):
-        raise RayGetError(objectid[i], value)
-    return values
-  value = worker.get_object(objectid)
-  if isinstance(value, RayTaskError):
-    # If the result is a RayTaskError, then the task that created this object
-    # failed, and we should propagate the error message here.
-    raise RayGetError(objectid, value)
-  return value
+    return object_ids # In PYTHON_MODE, ray.get is the identity operation (the input will actually be a value not an object ID).
+  # Handle the list and non-list case together.
+  is_list = isinstance(object_ids, list)
+  if not is_list:
+    object_ids = [object_ids]
+  # Wait until the objects have been fetched to the local object store.
+  while True:
+    object_id_strings = [object_id.id() for object_id in object_ids]
+    if len(object_id_strings) == 0:
+      break
+    if worker.plasma_client.fetch(object_id_strings) == len(object_id_strings) * [True]:
+      break
+    time.sleep(0.001)
+  # Get the objects corresponding to the object IDs.
+  values = [worker.get_object(x) for x in object_ids]
+  for i, value in enumerate(values):
+    if isinstance(value, RayTaskError):
+      # If the result is a RayTaskError, then the task that created this object
+      # failed, and we should propagate the error message here.
+      raise RayGetError(object_ids[i], value)
+  # Unwrap the list in the case where a single object ID was passed in.
+  return values if is_list else values[0]
 
 def put(value, worker=global_worker):
   """Store an object in the object store.
@@ -1319,6 +1324,16 @@ def get_arguments_for_execution(function, serialized_args, worker=global_worker)
     RayGetArgumentError: This exception is raised if a task that created one of
       the arguments failed.
   """
+  # Wait until the objects have been fetched to the local object store.
+  object_id_args = [arg for arg in serialized_args if isinstance(arg, photon.ObjectID)]
+  while True:
+    object_id_strings = [object_id.id() for object_id in object_id_args]
+    if len(object_id_strings) == 0:
+      break
+    if worker.plasma_client.fetch(object_id_strings) == len(object_id_strings) * [True]:
+      break
+    time.sleep(0.001)
+  # Unpack the arguments.
   arguments = []
   for (i, arg) in enumerate(serialized_args):
     if isinstance(arg, photon.ObjectID):
@@ -1331,7 +1346,6 @@ def get_arguments_for_execution(function, serialized_args, worker=global_worker)
     else:
       # pass the argument by value
       argument = arg
-
     arguments.append(argument)
   return arguments
 
