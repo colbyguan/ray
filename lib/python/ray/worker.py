@@ -437,6 +437,10 @@ class Worker(object):
     Args:
       objectid (object_id.ObjectID): The object ID of the value to retrieve.
     """
+    successes = [False]
+    while successes != [True]:
+      successes = self.plasma_client.fetch([objectid.id()])
+      time.sleep(0.001)
     buff = self.plasma_client.get(objectid.id())
     metadata = self.plasma_client.get_metadata(objectid.id())
     metadata_size = len(metadata)
@@ -601,7 +605,7 @@ def initialize_numbuf(worker=global_worker):
     register_class(RayGetError)
     register_class(RayGetArgumentError)
 
-def init(start_ray_local=False, num_workers=None, driver_mode=SCRIPT_MODE):
+def init(start_ray_local=False, num_workers=None, num_local_schedulers=1, driver_mode=SCRIPT_MODE):
   """Either connect to an existing Ray cluster or start one and connect to it.
 
   This method handles two cases. Either a Ray cluster already exists and we
@@ -636,7 +640,7 @@ def init(start_ray_local=False, num_workers=None, driver_mode=SCRIPT_MODE):
     num_workers = 1 if num_workers is None else num_workers
     # Start the scheduler, object store, and some workers. These will be killed
     # by the call to cleanup(), which happens when the Python script exits.
-    address_info = services.start_ray_local(num_workers=num_workers)
+    address_info = services.start_ray_local(num_workers=num_workers, num_local_schedulers=num_local_schedulers)
   else:
     raise Exception("This mode is currently not enabled.")
   # Connect this driver to Redis, the object store, and the local scheduler. The
@@ -828,9 +832,9 @@ def connect(address_info, mode=WORKER_MODE, worker=global_worker):
   worker.redis_client.config_set("notify-keyspace-events", "AKE")
   worker.lock = threading.Lock()
   # Create an object store client.
-  worker.plasma_client = plasma.PlasmaClient(address_info["object_store_name"], address_info["object_store_manager_name"])
+  worker.plasma_client = plasma.PlasmaClient(address_info["object_store_names"][0], address_info["object_store_manager_names"][0])
   # Create the local scheduler client.
-  worker.photon_client = photon.PhotonClient(address_info["local_scheduler_name"])
+  worker.photon_client = photon.PhotonClient(address_info["local_scheduler_names"][0])
   # Register the worker with Redis.
   if mode in [SCRIPT_MODE, SILENT_MODE]:
     worker.redis_client.rpush("Drivers", worker.worker_id)
