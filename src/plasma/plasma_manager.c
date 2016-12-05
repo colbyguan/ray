@@ -371,6 +371,15 @@ void send_queued_request(event_loop *loop,
       CHECK(plasma_send_request(conn->fd, PLASMA_DATA, &manager_req) >= 0);
     }
     write_object_chunk(conn, buf);
+
+    /* Assuming this is where a seeder finishes transferring, decrement leecher count */
+    retry_info retry = {
+      .num_retries = NUM_RETRIES,
+      .timeout = MANAGER_TIMEOUT,
+      .fail_callback = NULL,
+    };
+    broadcast_table_decr(conn->manager_state->db, buf->object_id, &retry, NULL, NULL);
+
     break;
   default:
     LOG_FATAL("Buffered request has unknown type.");
@@ -433,6 +442,15 @@ void process_data_chunk(event_loop *loop,
   plasma_release(conn->manager_state->plasma_conn, buf->object_id);
   /* Remove the request buffer used for reading this object's data. */
   LL_DELETE(conn->transfer_queue, buf);
+
+  /* Assuming this is where a fetch has finished, add this node as a seeder */
+  retry_info retry = {
+    .num_retries = NUM_RETRIES,
+    .timeout = MANAGER_TIMEOUT,
+    .fail_callback = NULL,
+  };
+  broadcast_table_add(conn->manager_state->db, buf->object_id, &retry, NULL, NULL);
+
   free(buf);
   /* Switch to listening for requests from this socket, instead of reading
    * object data. */
