@@ -12,6 +12,7 @@
 #include "common.h"
 #include "db.h"
 #include "db_client_table.h"
+#include "broadcast_table.h"
 #include "object_table.h"
 #include "task.h"
 #include "task_table.h"
@@ -730,6 +731,101 @@ void redis_db_client_table_subscribe(table_callback_data *callback_data) {
   if ((status == REDIS_ERR) || db->sub_context->err) {
     LOG_REDIS_DEBUG(db->sub_context,
                     "error in db_client_table_register_callback");
+  }
+}
+
+void redis_broadcast_table_peek_callback(redisAsyncContext *c,
+                                         void *r,
+                                         void *privdata) {
+  REDIS_CALLBACK_HEADER(db, callback_data, r);
+  redisReply *reply = r;
+  object_id id = callback_data->id;
+
+  db_client_id *managers = malloc(reply->elements * sizeof(db_client_id));
+  int64_t manager_count = reply->elements;
+
+  if (reply->type != REDIS_REPLY_ARRAY) {
+    LOG_FATAL("Expected Redis array, received type %d %s", reply->type,
+              reply->str);
+  } else {
+    const char **manager_vector = malloc(sizeof(char *));
+
+    if (reply->elements == 1) {
+      CHECK(reply->element[0]->type == REDIS_REPLY_STRING);
+      memcpy(managers[0].id, reply->element[0]->str, sizeof(managers[0].id));
+
+      /* Just fire priority increment off */
+      int status = redisAsyncCommand(db->context, redis_broadcast_table_peek_callback,
+                                   (void *) callback_data->timer_id,
+                                   "ZINCRBY broadcast:%b 1 %b", id.id, sizeof(id.id),
+                                   managers[0].id, sizeof(managers[0].id));
+      if ((status == REDIS_ERR) || db->context->err) {
+        LOG_REDIS_DEBUG(db->context, "error in incrementing peeked manager for object broadcast");
+      }
+      redis_get_cached_db_client(db, managers[0], manager_vector);
+    }
+
+    broadcast_table_peek_done_callback done_callback =
+        callback_data->done_callback;
+    done_callback(callback_data->id, manager_count, manager_vector,
+                  callback_data->user_context);
+    destroy_timer_callback(callback_data->db_handle->loop, callback_data);
+    free(managers);
+  } 
+}
+
+void redis_broadcast_table_peek(table_callback_data *callback_data) {
+  CHECK(callback_data);
+  db_handle *db = callback_data->db_handle;
+
+  object_id id = callback_data->id;
+  int status = redisAsyncCommand(db->context, redis_broadcast_table_peek_callback,
+                                 (void *) callback_data->timer_id,
+                                 "ZRANGE broadcast:%b 0 0", id.id, sizeof(id.id));
+  if ((status == REDIS_ERR) || db->context->err) {
+    LOG_REDIS_DEBUG(db->context, "error in broadcast peeking for seeder");
+  }
+}
+
+/* Uses task table callback signature, like redis_object_table_add_callback does */
+void redis_broadcast_table_add_callback(redisAsyncContext *c,
+                                        void *r,
+                                        void *privdata) {
+  REDIS_CALLBACK_HEADER(db, callback_data, r);
+
+  if (callback_data->done_callback) {
+    task_table_done_callback done_callback = callback_data->done_callback;
+    done_callback(callback_data->id, callback_data->user_context);
+  }
+  destroy_timer_callback(db->loop, callback_data);
+}
+
+void redis_broadcast_table_add(table_callback_data *callback_data) {
+  CHECK(callback_data);
+  db_handle *db = callback_data->db_handle;
+  object_id id = callback_data->id;
+  int status = redisAsyncCommand(db->context, redis_broadcast_table_add_callback,
+                                 (void *) callback_data->timer_id,
+                                 "ZINCRBY broadcast:%b 1 %b", id.id, sizeof(id.id),
+                                 (char *) db->client.id, sizeof(db->client.id));
+
+  if ((status == REDIS_ERR) || db->context->err) {
+    LOG_REDIS_DEBUG(db->context, "could not add broadcast_table entry");
+  }
+}
+
+/* Uses the same callback as add */
+void redis_broadcast_table_decr(table_callback_data *callback_data) {
+  CHECK(callback_data);
+  db_handle *db = callback_data->db_handle;
+  object_id id = callback_data->id;
+  int status = redisAsyncCommand(db->context, redis_broadcast_table_add_callback,
+                                 (void *) callback_data->timer_id,
+                                 "ZINCRBY broadcast:%b -1 %b", id.id, sizeof(id.id),
+                                 (char *) db->client.id, sizeof(db->client.id));
+
+  if ((status == REDIS_ERR) || db->context->err) {
+    LOG_REDIS_DEBUG(db->context, "could not decr broadcast_table entry");
   }
 }
 

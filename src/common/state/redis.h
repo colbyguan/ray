@@ -183,4 +183,12 @@ void redis_task_table_subscribe(table_callback_data *callback_data);
  */
 void redis_db_client_table_subscribe(table_callback_data *callback_data);
 
+/*
+ * ==== Redis chained object broadcast function ====
+ */
+void redis_broadcast_table_peek(table_callback_data *callback_data);
+void redis_broadcast_table_add(table_callback_data *callback_data);
+void redis_broadcast_table_decr(table_callback_data *callback_data);
+
+
 #endif /* REDIS_H */
